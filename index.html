@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Egypt Cretaceous Paleomagnetic Pole Compilation</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="eyebrow">Working database prototype</div>
+  <h1>Egypt Cretaceous Paleomagnetic Pole Compilation</h1>
+  <p>Pole-level database for Egypt, scoped to 145–66 Ma; prepared as the first step toward a wider African Cretaceous paleomagnetic database.</p>
+  <nav class="nav"><a class="active" href="index.html">Home / overview</a><a class="" href="map.html">Interactive maps</a><a class="" href="compilation.html">Pole compilation</a><a class="" href="pole_assessments/index.html">Pole assessments</a><a class="" href="data_dictionary.html">Data dictionary</a><a class="" href="revisions.html">Revisions and additions</a></nav>
+</header>
+<main class="wrap">
+<section class="hero-grid">
+  <div class="panel">
+    <h2>Overview</h2>
+    <p>This is a GitHub Pages-ready static database generated from the current pole-level Excel table. It follows the same living-database idea as the Baltica prototype: the source data stay in <span class="mono">data/</span>, while the website pages provide searchable access, maps, and assessment scaffolds.</p>
+    <div class="notice"><b>Important scope note:</b> the stated database interval is <b>145–66 Ma</b>. Entries outside this interval are retained from the uploaded raw table but clearly flagged as outside the current Cretaceous scope.</div>
+    <p class="toc"><a href="compilation.html">Open compilation table</a><a href="map.html">Open maps</a><a href="pole_assessments/index.html">Open pole assessments</a><a href="data/poles.csv">Download CSV</a><a href="data/Africa_Cretaceous_Pmag_DB_pole_level.xlsx">Download original Excel</a></p>
+  </div>
+  <div class="panel">
+    <h3>Current source files</h3>
+    <ul>
+      <li><span class="mono">data/poles.csv</span></li>
+      <li><span class="mono">data/poles.json</span></li>
+      <li><span class="mono">data/Africa_Cretaceous_Pmag_DB_pole_level.xlsx</span></li>
+      <li><span class="mono">scripts/build_site.py</span></li>
+    </ul>
+    <h3>Database status</h3>
+    <p><span class="badge warn">first-run prototype</span> <span class="badge ok">pole-level</span> <span class="badge">Egypt first</span></p>
+  </div>
+</section>
+<section class="cards" data-summary></section>
+<section class="grid-2">
+  <div class="panel"><h3>Entries by time category</h3><div data-breakdown="subperiod"></div></div>
+  <div class="panel"><h3>Entries by reference</h3><div data-breakdown="reference"></div></div>
+</section>
+<section class="panel" style="margin-top:22px">
+  <h2>Assessment-page structure</h2>
+  <p>Each pole page currently has placeholders for scientific checking. Fill these gradually while keeping the spreadsheet/CSV as the master data source.</p>
+  <div class="grid-3">
+    <div><span class="badge">1</span> Geological context</div>
+    <div><span class="badge">2</span> Magnetization components</div>
+    <div><span class="badge">3</span> Age constraints</div>
+    <div><span class="badge">4</span> Site-level data</div>
+    <div><span class="badge">5</span> PSV / directional scatter</div>
+    <div><span class="badge">6</span> Pole reliability notes</div>
+    <div><span class="badge">7</span> Comparison to African Cretaceous poles</div>
+    <div><span class="badge">8</span> Comments / revision status</div>
+    <div><span class="badge">9</span> Final decision</div>
+  </div>
+</section>
+
+<footer class="footer">
+  <p><b>Update rule:</b> keep scientific inputs in <span class="mono">data/</span>. Generated HTML pages can be regenerated after updates.</p>
+  <p>Generated from <span class="mono">Africa_Cretaceous_Pmag_DB_pole_level.xlsx</span>. Repository-ready static GitHub Pages package.</p>
+</footer>
+<script src="assets/app.js"></script>
+</main>
+</body>
+</html>

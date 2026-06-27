@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Pole Compilation Table</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<header class="site-header">
+  <div class="eyebrow">Working database prototype</div>
+  <h1>Pole Compilation Table</h1>
+  <p>Search, filter, and open individual assessment pages for each pole-level entry.</p>
+  <nav class="nav"><a class="" href="index.html">Home / overview</a><a class="" href="map.html">Interactive maps</a><a class="active" href="compilation.html">Pole compilation</a><a class="" href="pole_assessments/index.html">Pole assessments</a><a class="" href="data_dictionary.html">Data dictionary</a><a class="" href="revisions.html">Revisions and additions</a></nav>
+</header>
+<main class="wrap">
+<section class="panel">
+  <h2>Compilation</h2>
+  <div class="controls">
+    <input id="search" type="search" placeholder="Search area, unit, reference, comment, ID…">
+    <select id="scope-filter"><option value="in">Cretaceous scope only</option><option value="all">All uploaded entries</option><option value="out">Outside Cretaceous scope</option></select>
+    <select id="area-filter"></select>
+    <select id="ref-filter"></select>
+    <button id="reset" class="secondary" type="button">Reset</button>
+    <a class="button" href="data/poles.csv">Download CSV</a>
+  </div>
+  <p class="small">Showing <b id="count">0</b> entries. Click table headers to sort.</p>
+  <div class="table-wrap">
+    <table id="pole-table">
+      <thead><tr>
+        <th data-sort="id">ID</th><th data-sort="area">Area</th><th data-sort="unit">Unit</th><th data-sort="nominal_age_ma">Nominal age</th><th data-sort="high_age_ma">High age</th><th data-sort="low_age_ma">Low age</th><th data-sort="n_sites">N sites</th><th data-sort="dec_deg">Dec</th><th data-sort="inc_deg">Inc</th><th data-sort="alpha95_deg">α95</th><th data-sort="pole_lat">P_lat</th><th data-sort="pole_lon_0_360">P_long</th><th data-sort="a95_deg">A95</th><th data-sort="reference">Reference</th><th data-sort="scope_label">Scope</th>
+      </tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
+<footer class="footer">
+  <p><b>Update rule:</b> keep scientific inputs in <span class="mono">data/</span>. Generated HTML pages can be regenerated after updates.</p>
+  <p>Generated from <span class="mono">Africa_Cretaceous_Pmag_DB_pole_level.xlsx</span>. Repository-ready static GitHub Pages package.</p>
+</footer>
+<script src="assets/app.js"></script>
+</main>
+</body>
+</html>
