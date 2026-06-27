@@ -71,7 +71,7 @@ function setupCompilation(data){
         <td><a href="pole_assessments/${esc(d.page_slug)}"><b>${esc(d.id)}</b></a><br><span class="small">${esc(d.subperiod)}</span></td>
         <td>${esc(d.area)}</td>
         <td>${esc(d.unit)}</td>
-        <td class="num">${fmt(d.nominal_age_ma,1)}</td>
+        <td class="num age-cell"><span class="age-dot" style="background:${ageColor(d)}"></span>${fmt(d.nominal_age_ma,1)}</td>
         <td class="num">${fmt(d.high_age_ma,1)}</td>
         <td class="num">${fmt(d.low_age_ma,1)}</td>
         <td class="num">${fmt(d.n_sites,0)}</td>
@@ -90,7 +90,27 @@ function setupCompilation(data){
   table.querySelectorAll('th[data-sort]').forEach(th=>th.addEventListener('click',()=>{ const k=th.dataset.sort; if(k===sortKey) sortDir*=-1; else {sortKey=k; sortDir=1;} draw(); }));
   draw();
 }
-function markerHtml(color){return `<span style="display:block;width:14px;height:14px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 0 1px #333"></span>`}
+
+const AGE_BINS = [
+  {label:'outside 145–66 Ma', min:-Infinity, max:66, color:'#a33a2c'},
+  {label:'66–80 Ma', min:66, max:80, color:'#f4d35e'},
+  {label:'80–90 Ma', min:80, max:90, color:'#f28e2b'},
+  {label:'90–100.5 Ma', min:90, max:100.5, color:'#59a14f'},
+  {label:'100.5–120 Ma', min:100.5, max:120, color:'#4e79a7'},
+  {label:'120–145 Ma', min:120, max:145.000001, color:'#7b61a3'},
+  {label:'outside 145–66 Ma', min:145.000001, max:Infinity, color:'#a33a2c'}
+];
+function ageBin(d){
+  const age = Number(d.nominal_age_ma);
+  if(!Number.isFinite(age)) return {label:'age unknown', color:'#7a8494'};
+  if(age < 66 || age > 145) return {label:'outside 145–66 Ma', color:'#a33a2c'};
+  return AGE_BINS.find(b => age >= b.min && age < b.max) || {label:'age unknown', color:'#7a8494'};
+}
+function ageColor(d){ return ageBin(d).color; }
+function markerHtml(color, outside=false){
+  const extra = outside ? 'outline:2px solid #a33a2c;outline-offset:2px;' : '';
+  return `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 0 1px #333;${extra}"></span>`
+}
 function initMaps(data){
   if(!document.querySelector('#site-map') || typeof L === 'undefined') return;
   const siteMap = L.map('site-map').setView([25,34],5);
@@ -102,13 +122,15 @@ function initMaps(data){
   const siteGroup = L.featureGroup().addTo(siteMap);
   const poleGroup = L.featureGroup().addTo(poleMap);
   data.forEach(d=>{
-    const color = d.is_cretaceous_scope ? '#16a085' : '#a33a2c';
-    const popup = `<b>${esc(d.area)}</b><br>${esc(d.unit)}<br>${fmt(d.nominal_age_ma,1)} Ma<br><a href="pole_assessments/${esc(d.page_slug)}">assessment page</a>`;
+    const bin = ageBin(d);
+    const color = bin.color;
+    const outside = !d.is_cretaceous_scope;
+    const popup = `<b>${esc(d.area)}</b><br>${esc(d.unit)}<br><b>${fmt(d.nominal_age_ma,1)} Ma</b> — ${esc(bin.label)}<br><a href="pole_assessments/${esc(d.page_slug)}">assessment page</a>`;
     if(d.site_lat !== null && d.site_lon !== null){
-      L.marker([d.site_lat,d.site_lon],{icon:L.divIcon({className:'',html:markerHtml(color),iconSize:[14,14]})}).bindPopup(popup).addTo(siteGroup);
+      L.marker([d.site_lat,d.site_lon],{icon:L.divIcon({className:'',html:markerHtml(color, outside),iconSize:[18,18]})}).bindPopup(popup).addTo(siteGroup);
     }
     if(d.pole_lat !== null && d.pole_lon_minus180_180 !== null){
-      L.circleMarker([d.pole_lat,d.pole_lon_minus180_180],{radius:6,color:color,fillColor:color,fillOpacity:.75,weight:1}).bindPopup(`${popup}<br>VGP/pole lon shown as ${fmt(d.pole_lon_minus180_180,1)}° for map`).addTo(poleGroup);
+      L.circleMarker([d.pole_lat,d.pole_lon_minus180_180],{radius:6.5,color:outside ? '#7a231d' : '#243447',fillColor:color,fillOpacity:.88,weight:1.2}).bindPopup(`${popup}<br>VGP/pole lon shown as ${fmt(d.pole_lon_minus180_180,1)}° for map`).addTo(poleGroup);
     }
   });
   if(siteGroup.getLayers().length) siteMap.fitBounds(siteGroup.getBounds().pad(.25));
