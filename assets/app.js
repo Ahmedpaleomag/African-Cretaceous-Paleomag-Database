@@ -91,25 +91,66 @@ function setupCompilation(data){
   draw();
 }
 
-const AGE_BINS = [
-  {label:'outside 145–66 Ma', min:-Infinity, max:66, color:'#a33a2c'},
-  {label:'66–80 Ma', min:66, max:80, color:'#f4d35e'},
-  {label:'80–90 Ma', min:80, max:90, color:'#f28e2b'},
-  {label:'90–100.5 Ma', min:90, max:100.5, color:'#59a14f'},
-  {label:'100.5–120 Ma', min:100.5, max:120, color:'#4e79a7'},
-  {label:'120–145 Ma', min:120, max:145.000001, color:'#7b61a3'},
-  {label:'outside 145–66 Ma', min:145.000001, max:Infinity, color:'#a33a2c'}
+
+const CRET_MIN = 66;
+const CRET_MAX = 145;
+const VIRIDIS_STOPS = [
+  {t:0.00, hex:'#440154'},
+  {t:0.25, hex:'#3b528b'},
+  {t:0.50, hex:'#21918c'},
+  {t:0.75, hex:'#5ec962'},
+  {t:1.00, hex:'#fde725'}
 ];
+function hexToRgb(hex){
+  const h = hex.replace('#','');
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+}
+function rgbToHex(rgb){
+  return '#' + rgb.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
+}
+function interpColor(t){
+  t = Math.max(0, Math.min(1, t));
+  for(let i=0;i<VIRIDIS_STOPS.length-1;i++){
+    const a = VIRIDIS_STOPS[i], b = VIRIDIS_STOPS[i+1];
+    if(t >= a.t && t <= b.t){
+      const f = (t - a.t) / (b.t - a.t);
+      const ar = hexToRgb(a.hex), br = hexToRgb(b.hex);
+      return rgbToHex(ar.map((v,j)=>v + (br[j]-v)*f));
+    }
+  }
+  return VIRIDIS_STOPS[VIRIDIS_STOPS.length-1].hex;
+}
+function ageT(d){
+  const age = Number(d.nominal_age_ma);
+  if(!Number.isFinite(age)) return null;
+  return (age - CRET_MIN) / (CRET_MAX - CRET_MIN);
+}
 function ageBin(d){
   const age = Number(d.nominal_age_ma);
   if(!Number.isFinite(age)) return {label:'age unknown', color:'#7a8494'};
-  if(age < 66 || age > 145) return {label:'outside 145–66 Ma', color:'#a33a2c'};
-  return AGE_BINS.find(b => age >= b.min && age < b.max) || {label:'age unknown', color:'#7a8494'};
+  if(age < CRET_MIN || age > CRET_MAX) return {label:'outside 145–66 Ma', color:'#a33a2c'};
+  return {label:`${fmt(age,1)} Ma`, color:interpColor(ageT(d))};
 }
 function ageColor(d){ return ageBin(d).color; }
 function markerHtml(color, outside=false){
   const extra = outside ? 'outline:2px solid #a33a2c;outline-offset:2px;' : '';
   return `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 0 1px #333;${extra}"></span>`
+}
+function addAgeScaleControl(map){
+  const control = L.control({position:'topright'});
+  control.onAdd = function(){
+    const div = L.DomUtil.create('div','leaflet-control age-scale-control');
+    div.innerHTML = `
+      <div class="age-scale-title">Nominal age (Ma)</div>
+      <div class="age-scale-bar"></div>
+      <div class="age-scale-ticks">
+        <span>66</span><span>80</span><span>90</span><span>100.5</span><span>120</span><span>145</span>
+      </div>
+      <div class="age-scale-note"><i></i> outside scope</div>`;
+    L.DomEvent.disableClickPropagation(div);
+    return div;
+  };
+  control.addTo(map);
 }
 function initMaps(data){
   if(!document.querySelector('#site-map') || typeof L === 'undefined') return;
@@ -119,6 +160,8 @@ function initMaps(data){
   const attr = '&copy; OpenStreetMap contributors';
   L.tileLayer(tiles,{maxZoom:10, attribution:attr}).addTo(siteMap);
   L.tileLayer(tiles,{maxZoom:5, attribution:attr}).addTo(poleMap);
+  addAgeScaleControl(siteMap);
+  addAgeScaleControl(poleMap);
   const siteGroup = L.featureGroup().addTo(siteMap);
   const poleGroup = L.featureGroup().addTo(poleMap);
   data.forEach(d=>{
