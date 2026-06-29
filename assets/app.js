@@ -400,10 +400,6 @@ async function initMaps(data){
     'Global PSV localities, 145–66 Ma': psvGroup
   }, {collapsed:false}).addTo(siteMap);
 
-  L.control.layers(null, {
-    'Egyptian paleomagnetic poles': poleGroup
-  }, {collapsed:false}).addTo(poleMap);
-
   if(siteGroup.getLayers().length) siteMap.fitBounds(siteGroup.getBounds().pad(.25));
   if(poleGroup.getLayers().length) poleMap.fitBounds(poleGroup.getBounds().pad(.25));
 }
