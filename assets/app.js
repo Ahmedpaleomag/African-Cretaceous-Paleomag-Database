@@ -1,8 +1,73 @@
 
 let POLES = [];
+let PSV_LOCALITIES = [];
 const fmt = (v, d=1) => (v === null || v === undefined || v === '') ? '' : (Number.isFinite(+v) ? (+v).toFixed(d).replace(/\.0$/,'').replace(/(\.\d*?)0+$/,'$1') : v);
 const esc = (s) => String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
 async function loadPoles(){
+  function parseCSV(text){
+  const rows = [];
+  let row = [], cell = '', inQuotes = false;
+
+  for(let i=0; i<text.length; i++){
+    const c = text[i], n = text[i+1];
+
+    if(c === '"' && inQuotes && n === '"'){
+      cell += '"';
+      i++;
+    } else if(c === '"'){
+      inQuotes = !inQuotes;
+    } else if(c === ',' && !inQuotes){
+      row.push(cell);
+      cell = '';
+    } else if((c === '\n' || c === '\r') && !inQuotes){
+      if(c === '\r' && n === '\n') i++;
+      row.push(cell);
+      if(row.some(x => x.trim() !== '')) rows.push(row);
+      row = [];
+      cell = '';
+    } else {
+      cell += c;
+    }
+  }
+
+  if(cell || row.length){
+    row.push(cell);
+    if(row.some(x => x.trim() !== '')) rows.push(row);
+  }
+
+  const headers = rows.shift().map(h => h.trim());
+  return rows.map(r => {
+    const obj = {};
+    headers.forEach((h, i) => obj[h] = (r[i] ?? '').trim());
+    return obj;
+  });
+}
+
+function normalizeLon(lon){
+  const x = Number(lon);
+  if(!Number.isFinite(x)) return null;
+  return x > 180 ? x - 360 : x;
+}
+
+async function loadPSVLocalities(){
+  if(PSV_LOCALITIES.length) return PSV_LOCALITIES;
+
+  const dataUrl = location.pathname.includes('/pole_assessments/')
+    ? '../data/global_psv_localities_145_66_preferred.csv'
+    : 'data/global_psv_localities_145_66_preferred.csv';
+
+  try{
+    const res = await fetch(dataUrl);
+    if(!res.ok) throw new Error(`Could not load ${dataUrl}`);
+    const text = await res.text();
+    PSV_LOCALITIES = parseCSV(text);
+  } catch(err){
+    console.warn('Global PSV layer not loaded:', err);
+    PSV_LOCALITIES = [];
+  }
+
+  return PSV_LOCALITIES;
+}
   if(POLES.length) return POLES;
   const dataUrl = location.pathname.includes('/pole_assessments/') ? '../data/poles.json' : 'data/poles.json';
   const res = await fetch(dataUrl);
@@ -136,6 +201,17 @@ function markerHtml(color, outside=false){
   const extra = outside ? 'outline:2px solid #a33a2c;outline-offset:2px;' : '';
   return `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 0 1px #333;${extra}"></span>`
 }
+function psvMarkerHtml(color){
+  return `<span style="
+    display:block;
+    width:13px;
+    height:13px;
+    background:${color};
+    border:2px solid white;
+    box-shadow:0 0 0 1px #222;
+    transform:rotate(45deg);
+  "></span>`;
+}
 function addAgeScaleControl(map){
   const control = L.control({position:'topright'});
   control.onAdd = function(){
@@ -152,31 +228,93 @@ function addAgeScaleControl(map){
   };
   control.addTo(map);
 }
-function initMaps(data){
+async function initMaps(data){
   if(!document.querySelector('#site-map') || typeof L === 'undefined') return;
+
   const siteMap = L.map('site-map').setView([25,34],5);
   const poleMap = L.map('pole-map').setView([55,-80],2);
+
   const tiles = 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png';
   const attr = '&copy; OpenStreetMap contributors';
+
   L.tileLayer(tiles,{maxZoom:10, attribution:attr}).addTo(siteMap);
   L.tileLayer(tiles,{maxZoom:5, attribution:attr}).addTo(poleMap);
+
   addAgeScaleControl(siteMap);
   addAgeScaleControl(poleMap);
+
   const siteGroup = L.featureGroup().addTo(siteMap);
   const poleGroup = L.featureGroup().addTo(poleMap);
+  const psvGroup = L.featureGroup();
+
   data.forEach(d=>{
     const bin = ageBin(d);
     const color = bin.color;
     const outside = !d.is_cretaceous_scope;
+
     const popup = `<b>${esc(d.area)}</b><br>${esc(d.unit)}<br><b>${fmt(d.nominal_age_ma,1)} Ma</b> — ${esc(bin.label)}<br><a href="pole_assessments/${esc(d.page_slug)}">assessment page</a>`;
+
     if(d.site_lat !== null && d.site_lon !== null){
-      L.marker([d.site_lat,d.site_lon],{icon:L.divIcon({className:'',html:markerHtml(color, outside),iconSize:[18,18]})}).bindPopup(popup).addTo(siteGroup);
+      L.marker([d.site_lat,d.site_lon],{
+        icon:L.divIcon({
+          className:'',
+          html:markerHtml(color, outside),
+          iconSize:[18,18]
+        })
+      }).bindPopup(popup).addTo(siteGroup);
     }
+
     if(d.pole_lat !== null && d.pole_lon_minus180_180 !== null){
-      L.circleMarker([d.pole_lat,d.pole_lon_minus180_180],{radius:6.5,color:outside ? '#7a231d' : '#243447',fillColor:color,fillOpacity:.88,weight:1.2}).bindPopup(`${popup}<br>VGP/pole lon shown as ${fmt(d.pole_lon_minus180_180,1)}° for map`).addTo(poleGroup);
+      L.circleMarker([d.pole_lat,d.pole_lon_minus180_180],{
+        radius:6.5,
+        color:outside ? '#7a231d' : '#243447',
+        fillColor:color,
+        fillOpacity:.88,
+        weight:1.2
+      }).bindPopup(`${popup}<br>VGP/pole lon shown as ${fmt(d.pole_lon_minus180_180,1)}° for map`).addTo(poleGroup);
     }
   });
+
+  const psvData = await loadPSVLocalities();
+
+  psvData.forEach(d=>{
+    const lat = Number(d.lat);
+    const lon = normalizeLon(d.long);
+    const age = Number(d.nominal_age_ma);
+
+    if(!Number.isFinite(lat) || lon === null) return;
+
+    const color = Number.isFinite(age)
+      ? interpColor((age - CRET_MIN) / (CRET_MAX - CRET_MIN))
+      : '#222';
+
+    const popup = `
+      <b>${esc(d.locality || d.rock_formation || d.source_id)}</b><br>
+      ${esc(d.country || '')}<br>
+      <b>${fmt(age,1)} Ma</b><br>
+      Source: ${esc(d.source_database || '')}<br>
+      N sites: ${esc(d.n_sites || '')}<br>
+      Reference: ${esc(d.primary_reference || '')}
+    `;
+
+    L.marker([lat, lon],{
+      icon:L.divIcon({
+        className:'',
+        html:psvMarkerHtml(color),
+        iconSize:[18,18]
+      })
+    }).bindPopup(popup).addTo(psvGroup);
+  });
+
+  L.control.layers(null, {
+    'Egyptian site/locality positions': siteGroup,
+    'Global PSV localities, 145–66 Ma': psvGroup
+  }, {collapsed:false}).addTo(siteMap);
+
+  L.control.layers(null, {
+    'Egyptian paleomagnetic poles': poleGroup
+  }, {collapsed:false}).addTo(poleMap);
+
   if(siteGroup.getLayers().length) siteMap.fitBounds(siteGroup.getBounds().pad(.25));
   if(poleGroup.getLayers().length) poleMap.fitBounds(poleGroup.getBounds().pad(.25));
 }
-loadPoles().then(data=>{renderSummary(data);renderBreakdowns(data);setupCompilation(data);initMaps(data);});
