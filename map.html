@@ -4,40 +4,95 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Interactive Pole Maps</title>
-  <link rel="stylesheet" href="assets/style.css">
-</head>
-<body>
-<header class="site-header">
-  <div class="eyebrow">Working database prototype</div>
-  <h1>Interactive Pole Maps</h1>
-  <p>Field/locality positions and paleomagnetic pole positions from the current pole-level table.</p>
-  <nav class="nav"><a class="" href="index.html">Home / overview</a><a class="active" href="map.html">Interactive maps</a><a class="" href="compilation.html">Pole compilation</a><a class="" href="pole_assessments/index.html">Pole assessments</a><a class="" href="data_dictionary.html">Data dictionary</a><a class="" href="revisions.html">Revisions and additions</a></nav>
-</header>
-<main class="wrap">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
-<section class="panel">
-  <h2>Maps</h2>
-<p>The left map shows Egyptian site/locality coordinates and an optional global PSV/directional context layer for 145–66 Ma. The right map shows Egyptian paleomagnetic pole positions only. Egyptian records are colour-coded by nominal age; pole longitudes are stored in the table as 0–360° and converted to −180–180° only for map display.</p>  <div class="legend age-legend">
-    <div class="inline-age-scale">
-      <div class="age-scale-title">Nominal age colour scale, Ma</div>
-      <div class="age-scale-bar"></div>
-      <div class="age-scale-ticks"><span>66</span><span>80</span><span>90</span><span>100.5</span><span>120</span><span>145</span></div>
-    </div>
-    <span><i class="dot" style="background:#a33a2c"></i> outside stated scope, retained raw entry</span>
-  <span><i class="dot" style="background:#222;border-radius:0;width:10px;height:10px;transform:rotate(45deg);"></i> global PSV/directional locality, 145–66 Ma</span>
-  </div>
-</section>
-<section class="map-grid">
-  <div><h3>Site/locality coordinates</h3><div id="site-map" class="map"></div></div>
-  <div><h3>Paleomagnetic pole coordinates</h3><div id="pole-map" class="map"></div></div>
-</section>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
-<footer class="footer">
-  <p><b>Update rule:</b> keep scientific inputs in <span class="mono">data/</span>. Generated HTML pages can be regenerated after updates.</p>
-  <p>Generated from <span class="mono">Africa_Cretaceous_Pmag_DB_pole_level.xlsx</span>. Repository-ready static GitHub Pages package.</p>
-</footer>
-<script src="assets/app.js?v=psv2"></script>
-</main>
+  <link rel="stylesheet" href="assets/style.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+</head>
+
+<body>
+  <header class="site-header">
+    <div class="eyebrow">Working database prototype</div>
+
+    <h1>Interactive Pole Maps</h1>
+
+    <p>
+      Field/locality positions, global PSV/directional context localities, and paleomagnetic pole positions
+      from the current pole-level table.
+    </p>
+
+    <nav class="nav">
+      <a class="" href="index.html">Home / overview</a>
+      <a class="active" href="map.html">Interactive maps</a>
+      <a class="" href="compilation.html">Pole compilation</a>
+      <a class="" href="pole_assessments/index.html">Pole assessments</a>
+      <a class="" href="data_dictionary.html">Data dictionary</a>
+      <a class="" href="revisions.html">Revisions and additions</a>
+    </nav>
+  </header>
+
+  <main class="wrap">
+    <section class="panel">
+      <h2>Maps</h2>
+
+      <p>
+        The left map shows Egyptian site/locality coordinates and an optional global PSV/directional
+        context layer for 145–66 Ma. The right map shows Egyptian paleomagnetic pole positions only.
+        Egyptian records are colour-coded by nominal age; pole longitudes are stored in the table as
+        0–360° and converted to −180–180° only for map display.
+      </p>
+
+      <div class="legend age-legend">
+        <div class="inline-age-scale">
+          <div class="age-scale-title">Nominal age colour scale, Ma</div>
+          <div class="age-scale-bar"></div>
+          <div class="age-scale-ticks">
+            <span>66</span>
+            <span>80</span>
+            <span>90</span>
+            <span>100.5</span>
+            <span>120</span>
+            <span>145</span>
+          </div>
+        </div>
+
+        <span>
+          <i class="dot" style="background:#a33a2c"></i>
+          outside stated scope, retained raw entry
+        </span>
+
+        <span>
+          <i class="dot" style="background:#222;border-radius:0;width:10px;height:10px;transform:rotate(45deg);"></i>
+          global PSV/directional locality, 145–66 Ma
+        </span>
+      </div>
+    </section>
+
+    <section class="map-grid">
+      <div>
+        <h3>Site/locality coordinates</h3>
+        <div id="site-map" class="map"></div>
+      </div>
+
+      <div>
+        <h3>Paleomagnetic pole coordinates</h3>
+        <div id="pole-map" class="map"></div>
+      </div>
+    </section>
+
+    <footer class="footer">
+      <p>
+        <b>Update rule:</b> keep scientific inputs in <span class="mono">data/</span>.
+        Generated HTML pages can be regenerated after updates.
+      </p>
+
+      <p>
+        Generated from <span class="mono">Africa_Cretaceous_Pmag_DB_pole_level.xlsx</span>.
+        Repository-ready static GitHub Pages package.
+      </p>
+    </footer>
+  </main>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="assets/app.js?v=psv4"></script>
 </body>
 </html>
