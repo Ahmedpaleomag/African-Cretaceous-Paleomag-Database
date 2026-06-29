@@ -1,10 +1,18 @@
-
 let POLES = [];
 let PSV_LOCALITIES = [];
+
 const fmt = (v, d=1) => (v === null || v === undefined || v === '') ? '' : (Number.isFinite(+v) ? (+v).toFixed(d).replace(/\.0$/,'').replace(/(\.\d*?)0+$/,'$1') : v);
 const esc = (s) => String(s ?? '').replace(/[&<>'"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
 async function loadPoles(){
-  function parseCSV(text){
+  if(POLES.length) return POLES;
+  const dataUrl = location.pathname.includes('/pole_assessments/') ? '../data/poles.json' : 'data/poles.json';
+  const res = await fetch(dataUrl);
+  POLES = await res.json();
+  return POLES;
+}
+
+function parseCSV(text){
   const rows = [];
   let row = [], cell = '', inQuotes = false;
 
@@ -43,6 +51,13 @@ async function loadPoles(){
   });
 }
 
+function getAny(obj, keys){
+  for(const k of keys){
+    if(obj[k] !== undefined && obj[k] !== null && obj[k] !== '') return obj[k];
+  }
+  return '';
+}
+
 function normalizeLon(lon){
   const x = Number(lon);
   if(!Number.isFinite(x)) return null;
@@ -68,52 +83,66 @@ async function loadPSVLocalities(){
 
   return PSV_LOCALITIES;
 }
-  if(POLES.length) return POLES;
-  const dataUrl = location.pathname.includes('/pole_assessments/') ? '../data/poles.json' : 'data/poles.json';
-  const res = await fetch(dataUrl);
-  POLES = await res.json();
-  return POLES;
-}
+
 function refOptions(data){
   return [...new Set(data.map(d=>d.reference).filter(Boolean))].sort();
 }
+
 function areaOptions(data){
   return [...new Set(data.map(d=>d.area).filter(Boolean))].sort();
 }
+
 function renderSummary(data){
-  const el = document.querySelector('[data-summary]'); if(!el) return;
+  const el = document.querySelector('[data-summary]');
+  if(!el) return;
+
   const inScope = data.filter(d=>d.is_cretaceous_scope).length;
   const refs = new Set(data.map(d=>d.reference).filter(Boolean)).size;
   const ages = data.map(d=>d.nominal_age_ma).filter(v=>v!==null);
   const totalSites = data.reduce((a,d)=>a+(+d.n_sites||0),0);
+
   el.innerHTML = `
     <div class="card"><div class="num">${data.length}</div><div class="label">uploaded pole entries</div></div>
     <div class="card"><div class="num">${inScope}</div><div class="label">within 145–66 Ma</div></div>
     <div class="card"><div class="num">${refs}</div><div class="label">references</div></div>
     <div class="card"><div class="num">${fmt(Math.min(...ages),0)}–${fmt(Math.max(...ages),0)}</div><div class="label">nominal age range, Ma</div></div>`;
 }
+
 function renderBreakdowns(data){
   document.querySelectorAll('[data-breakdown]').forEach(el=>{
     const key = el.dataset.breakdown;
     const counts = {};
-    data.forEach(d=>{ const k = d[key] || 'Unknown'; counts[k]=(counts[k]||0)+1; });
+
+    data.forEach(d=>{
+      const k = d[key] || 'Unknown';
+      counts[k] = (counts[k] || 0) + 1;
+    });
+
     const max = Math.max(...Object.values(counts));
+
     el.innerHTML = Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([k,v])=>
       `<div style="margin:10px 0"><b>${esc(k)}</b> <span class="small">${v}</span><div class="chartbar"><span style="width:${100*v/max}%"></span></div></div>`
     ).join('');
   });
 }
+
 function setupCompilation(data){
-  const table = document.querySelector('#pole-table'); if(!table) return;
+  const table = document.querySelector('#pole-table');
+  if(!table) return;
+
   const search = document.querySelector('#search');
   const scope = document.querySelector('#scope-filter');
   const ref = document.querySelector('#ref-filter');
   const area = document.querySelector('#area-filter');
+
   ref.innerHTML = '<option value="">All references</option>' + refOptions(data).map(x=>`<option>${esc(x)}</option>`).join('');
   area.innerHTML = '<option value="">All areas</option>' + areaOptions(data).map(x=>`<option>${esc(x)}</option>`).join('');
+
   let sortKey = 'nominal_age_ma', sortDir = 1;
+
   function filtered(){
-    const q = (search.value||'').toLowerCase();
+    const q = (search.value || '').toLowerCase();
+
     return data.filter(d=>{
       if(scope.value === 'in' && !d.is_cretaceous_scope) return false;
       if(scope.value === 'out' && d.is_cretaceous_scope) return false;
@@ -122,15 +151,22 @@ function setupCompilation(data){
       if(q && !(`${d.area} ${d.unit} ${d.reference} ${d.comment} ${d.id}`.toLowerCase().includes(q))) return false;
       return true;
     }).sort((a,b)=>{
-      let av=a[sortKey], bv=b[sortKey];
-      if(av===null||av===undefined) av=''; if(bv===null||bv===undefined) bv='';
-      if(typeof av === 'number' || typeof bv === 'number') return ((+av||0)-(+bv||0))*sortDir;
-      return String(av).localeCompare(String(bv))*sortDir;
+      let av = a[sortKey], bv = b[sortKey];
+      if(av === null || av === undefined) av = '';
+      if(bv === null || bv === undefined) bv = '';
+
+      if(typeof av === 'number' || typeof bv === 'number') {
+        return ((+av || 0) - (+bv || 0)) * sortDir;
+      }
+
+      return String(av).localeCompare(String(bv)) * sortDir;
     });
   }
+
   function draw(){
     const rows = filtered();
     document.querySelector('#count').textContent = rows.length;
+
     table.querySelector('tbody').innerHTML = rows.map(d=>`
       <tr>
         <td><a href="pole_assessments/${esc(d.page_slug)}"><b>${esc(d.id)}</b></a><br><span class="small">${esc(d.subperiod)}</span></td>
@@ -150,15 +186,33 @@ function setupCompilation(data){
         <td>${d.is_cretaceous_scope ? '<span class="badge ok">145–66 Ma</span>' : '<span class="badge out">outside scope</span>'}</td>
       </tr>`).join('');
   }
-  [search,scope,ref,area].forEach(el=>el.addEventListener('input', draw));
-  document.querySelector('#reset')?.addEventListener('click',()=>{search.value='';scope.value='in';ref.value='';area.value='';draw();});
-  table.querySelectorAll('th[data-sort]').forEach(th=>th.addEventListener('click',()=>{ const k=th.dataset.sort; if(k===sortKey) sortDir*=-1; else {sortKey=k; sortDir=1;} draw(); }));
+
+  [search, scope, ref, area].forEach(el=>el.addEventListener('input', draw));
+
+  document.querySelector('#reset')?.addEventListener('click', ()=>{
+    search.value = '';
+    scope.value = 'in';
+    ref.value = '';
+    area.value = '';
+    draw();
+  });
+
+  table.querySelectorAll('th[data-sort]').forEach(th=>th.addEventListener('click', ()=>{
+    const k = th.dataset.sort;
+    if(k === sortKey) sortDir *= -1;
+    else {
+      sortKey = k;
+      sortDir = 1;
+    }
+    draw();
+  }));
+
   draw();
 }
 
-
 const CRET_MIN = 66;
 const CRET_MAX = 145;
+
 const VIRIDIS_STOPS = [
   {t:0.00, hex:'#440154'},
   {t:0.25, hex:'#3b528b'},
@@ -166,41 +220,61 @@ const VIRIDIS_STOPS = [
   {t:0.75, hex:'#5ec962'},
   {t:1.00, hex:'#fde725'}
 ];
+
 function hexToRgb(hex){
   const h = hex.replace('#','');
-  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)];
+  return [
+    parseInt(h.slice(0,2),16),
+    parseInt(h.slice(2,4),16),
+    parseInt(h.slice(4,6),16)
+  ];
 }
+
 function rgbToHex(rgb){
   return '#' + rgb.map(v=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0')).join('');
 }
+
 function interpColor(t){
   t = Math.max(0, Math.min(1, t));
-  for(let i=0;i<VIRIDIS_STOPS.length-1;i++){
+
+  for(let i=0; i<VIRIDIS_STOPS.length-1; i++){
     const a = VIRIDIS_STOPS[i], b = VIRIDIS_STOPS[i+1];
+
     if(t >= a.t && t <= b.t){
       const f = (t - a.t) / (b.t - a.t);
       const ar = hexToRgb(a.hex), br = hexToRgb(b.hex);
       return rgbToHex(ar.map((v,j)=>v + (br[j]-v)*f));
     }
   }
+
   return VIRIDIS_STOPS[VIRIDIS_STOPS.length-1].hex;
 }
+
 function ageT(d){
   const age = Number(d.nominal_age_ma);
   if(!Number.isFinite(age)) return null;
   return (age - CRET_MIN) / (CRET_MAX - CRET_MIN);
 }
+
 function ageBin(d){
   const age = Number(d.nominal_age_ma);
+
   if(!Number.isFinite(age)) return {label:'age unknown', color:'#7a8494'};
   if(age < CRET_MIN || age > CRET_MAX) return {label:'outside 145–66 Ma', color:'#a33a2c'};
+
   return {label:`${fmt(age,1)} Ma`, color:interpColor(ageT(d))};
 }
-function ageColor(d){ return ageBin(d).color; }
+
+function ageColor(d){
+  return ageBin(d).color;
+}
+
 function markerHtml(color, outside=false){
   const extra = outside ? 'outline:2px solid #a33a2c;outline-offset:2px;' : '';
-  return `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 0 1px #333;${extra}"></span>`
+
+  return `<span style="display:block;width:15px;height:15px;border-radius:50%;background:${color};border:2px solid white;box-shadow:0 0 0 1px #333;${extra}"></span>`;
 }
+
 function psvMarkerHtml(color){
   return `<span style="
     display:block;
@@ -212,10 +286,13 @@ function psvMarkerHtml(color){
     transform:rotate(45deg);
   "></span>`;
 }
+
 function addAgeScaleControl(map){
   const control = L.control({position:'topright'});
+
   control.onAdd = function(){
     const div = L.DomUtil.create('div','leaflet-control age-scale-control');
+
     div.innerHTML = `
       <div class="age-scale-title">Nominal age (Ma)</div>
       <div class="age-scale-bar"></div>
@@ -223,11 +300,14 @@ function addAgeScaleControl(map){
         <span>66</span><span>80</span><span>90</span><span>100.5</span><span>120</span><span>145</span>
       </div>
       <div class="age-scale-note"><i></i> outside scope</div>`;
+
     L.DomEvent.disableClickPropagation(div);
     return div;
   };
+
   control.addTo(map);
 }
+
 async function initMaps(data){
   if(!document.querySelector('#site-map') || typeof L === 'undefined') return;
 
@@ -278,9 +358,12 @@ async function initMaps(data){
   const psvData = await loadPSVLocalities();
 
   psvData.forEach(d=>{
-    const lat = Number(d.lat);
-    const lon = normalizeLon(d.long);
-    const age = Number(d.nominal_age_ma);
+    const lat = Number(getAny(d, ['lat','Lat','LAT','latitude','Latitude']));
+    const lonRaw = getAny(d, ['long','lon','Long','Lon','LONG','LON','longitude','Longitude']);
+    const lon = normalizeLon(lonRaw);
+
+    const ageRaw = getAny(d, ['nominal_age_ma','age_ma','Age_Ma','age','Age']);
+    const age = Number(ageRaw);
 
     if(!Number.isFinite(lat) || lon === null) return;
 
@@ -288,13 +371,19 @@ async function initMaps(data){
       ? interpColor((age - CRET_MIN) / (CRET_MAX - CRET_MIN))
       : '#222';
 
+    const locality = getAny(d, ['locality','Locality','location','Location','rock_formation','Rock formation','source_id','DSID']);
+    const country = getAny(d, ['country','Country']);
+    const source = getAny(d, ['source_database','source','Source']);
+    const nsites = getAny(d, ['n_sites','N_sites','N','n']);
+    const reference = getAny(d, ['primary_reference','reference','Reference','references','References']);
+
     const popup = `
-      <b>${esc(d.locality || d.rock_formation || d.source_id)}</b><br>
-      ${esc(d.country || '')}<br>
+      <b>${esc(locality)}</b><br>
+      ${esc(country)}<br>
       <b>${fmt(age,1)} Ma</b><br>
-      Source: ${esc(d.source_database || '')}<br>
-      N sites: ${esc(d.n_sites || '')}<br>
-      Reference: ${esc(d.primary_reference || '')}
+      Source: ${esc(source)}<br>
+      N sites: ${esc(nsites)}<br>
+      Reference: ${esc(reference)}
     `;
 
     L.marker([lat, lon],{
@@ -318,3 +407,10 @@ async function initMaps(data){
   if(siteGroup.getLayers().length) siteMap.fitBounds(siteGroup.getBounds().pad(.25));
   if(poleGroup.getLayers().length) poleMap.fitBounds(poleGroup.getBounds().pad(.25));
 }
+
+loadPoles().then(data=>{
+  renderSummary(data);
+  renderBreakdowns(data);
+  setupCompilation(data);
+  initMaps(data);
+});
